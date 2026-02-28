@@ -94,11 +94,12 @@ def iiif_image(
 ) -> Response:
     try:
         quality, fmt = quality_format.rsplit(".", 1)
+        identifier_with_fmt = identifier + "." + fmt
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="quality.format must be provided") from exc
 
     validate_quality_and_format(quality, fmt)
-    source = _read_image(identifier, request)
+    source = _read_image(identifier_with_fmt, request)
 
     try:
         rendered, _, _ = render_image(source, region=region, size=size, rotation=rotation, fmt=fmt)
