@@ -1,4 +1,4 @@
-# serverless-iiif-image-server
+# anywhere-iiif-image-server
 
 FastAPI ベースの IIIF Image API 3.0 サーバ実装です。**Level 2** 相当まで対応しています。
 スタンドアロンサーバとしても、既存 FastAPI アプリに組み込むパッケージとしても利用できます。
