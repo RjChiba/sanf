@@ -40,6 +40,8 @@ class LocalFileConnector:
         image_path = (self.root / identifier).resolve()
         root_path = self.root.resolve()
 
+        print(image_path)
+
         if not str(image_path).startswith(str(root_path)):
             raise ImageNotFoundError("invalid identifier path")
 

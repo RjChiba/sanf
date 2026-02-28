@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse, RedirectResponse, Response
 from PIL import Image
 
 from app.connectors import ConnectorError, ImageNotFoundError, ImageSourceConnector, LocalFileConnector
-from app.iiif import IIIFRequestError, render_jpeg, validate_quality_and_format
+from app.iiif import IIIFRequestError, _MEDIA_TYPE, render_image, validate_quality_and_format
 
 
 IIIF_PROTOCOL = "http://iiif.io/api/image"
@@ -78,7 +78,7 @@ def iiif_info(identifier: str, request: Request) -> JSONResponse:
         "width": width,
         "height": height,
         "extraQualities": ["default"],
-        "extraFormats": ["jpg"],
+        "extraFormats": ["jpg", "png"],
     }
     return JSONResponse(body, media_type="application/ld+json")
 
@@ -101,11 +101,11 @@ def iiif_image(
     source = _read_image(identifier, request)
 
     try:
-        rendered, _, _ = render_jpeg(source, region=region, size=size, rotation=rotation)
+        rendered, _, _ = render_image(source, region=region, size=size, rotation=rotation, fmt=fmt)
     except IIIFRequestError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    return Response(content=rendered, media_type="image/jpeg")
+    return Response(content=rendered, media_type=_MEDIA_TYPE[fmt])
 
 
 @app.exception_handler(IIIFRequestError)

@@ -77,14 +77,19 @@ def validate_rotation(rotation: str) -> None:
         raise IIIFRequestError("unsupported rotation")
 
 
+_SUPPORTED_FORMATS = {"jpg", "png"}
+_PIL_FORMAT = {"jpg": "JPEG", "png": "PNG"}
+_MEDIA_TYPE = {"jpg": "image/jpeg", "png": "image/png"}
+
+
 def validate_quality_and_format(quality: str, fmt: str) -> None:
     if quality != "default":
         raise IIIFRequestError("unsupported quality")
-    if fmt != "jpg":
+    if fmt not in _SUPPORTED_FORMATS:
         raise IIIFRequestError("unsupported format")
 
 
-def render_jpeg(source_bytes: bytes, region: str, size: str, rotation: str) -> tuple[bytes, int, int]:
+def render_image(source_bytes: bytes, region: str, size: str, rotation: str, fmt: str) -> tuple[bytes, int, int]:
     validate_rotation(rotation)
 
     with Image.open(BytesIO(source_bytes)) as image:
@@ -97,5 +102,8 @@ def render_jpeg(source_bytes: bytes, region: str, size: str, rotation: str) -> t
             cropped = cropped.resize((out_w, out_h), Image.Resampling.LANCZOS)
 
         output = BytesIO()
-        cropped.save(output, format="JPEG", quality=85)
+        save_kwargs: dict = {"format": _PIL_FORMAT[fmt]}
+        if fmt == "jpg":
+            save_kwargs["quality"] = 85
+        cropped.save(output, **save_kwargs)
         return output.getvalue(), rgb.width, rgb.height
