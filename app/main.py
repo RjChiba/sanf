@@ -57,12 +57,12 @@ def _service_id(request: Request, identifier: str) -> str:
     return str(request.url_for("iiif_base", identifier=identifier))
 
 
-@app.get("/iiif/{identifier:path}", name="iiif_base")
+@app.get("/iiif/{identifier}", name="iiif_base")
 def iiif_base(identifier: str, request: Request) -> RedirectResponse:
     return RedirectResponse(url=str(request.url_for("iiif_info", identifier=identifier)), status_code=303)
 
 
-@app.get("/iiif/{identifier:path}/info.json", name="iiif_info")
+@app.get("/iiif/{identifier}/info.json", name="iiif_info")
 def iiif_info(identifier: str, request: Request) -> JSONResponse:
     data = _read_image(identifier, request)
 
@@ -83,7 +83,7 @@ def iiif_info(identifier: str, request: Request) -> JSONResponse:
     return JSONResponse(body, media_type="application/ld+json")
 
 
-@app.get("/iiif/{identifier:path}/{region}/{size}/{rotation}/{quality_format}")
+@app.get("/iiif/{identifier}/{region}/{size}/{rotation}/{quality_format}")
 def iiif_image(
     identifier: str,
     region: str,
