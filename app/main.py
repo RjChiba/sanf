@@ -14,7 +14,7 @@ from app.iiif import IIIFRequestError, _MEDIA_TYPE, render_image, validate_quali
 
 
 IIIF_PROTOCOL = "http://iiif.io/api/image"
-IIIF_LEVEL = "level1"
+IIIF_LEVEL = "level2"
 
 
 class ServiceContainer:
