@@ -31,13 +31,18 @@ def _client() -> TestClient:
     return TestClient(app)
 
 
+def _response_size(response) -> tuple[int, int]:
+    with Image.open(BytesIO(response.content)) as image:
+        return image.size
+
+
 def test_info_json() -> None:
     client = _client()
     response = client.get("/iiif/sample/info.json")
 
     assert response.status_code == 200
     body = response.json()
-    assert body["profile"] == "level1"
+    assert body["profile"] == "level2"
     assert body["width"] == 200
     assert body["height"] == 100
 
@@ -57,8 +62,41 @@ def test_level1_region_and_size() -> None:
     assert response.status_code == 200
 
 
-def test_invalid_rotation() -> None:
+def test_level2_pct_region_and_pct_size() -> None:
+    client = _client()
+    response = client.get("/iiif/sample/pct:0,0,50,50/pct:50/0/default.jpg")
+
+    assert response.status_code == 200
+    assert _response_size(response) == (50, 25)
+
+
+def test_level2_exact_size_png() -> None:
+    client = _client()
+    response = client.get("/iiif/sample/full/80,40/0/default.png")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("image/png")
+    assert _response_size(response) == (80, 40)
+
+
+def test_level2_best_fit_size() -> None:
+    client = _client()
+    response = client.get("/iiif/sample/full/!80,80/0/default.jpg")
+
+    assert response.status_code == 200
+    assert _response_size(response) == (80, 40)
+
+
+def test_level2_rotation_90() -> None:
     client = _client()
     response = client.get("/iiif/sample/full/max/90/default.jpg")
+
+    assert response.status_code == 200
+    assert _response_size(response) == (100, 200)
+
+
+def test_invalid_rotation() -> None:
+    client = _client()
+    response = client.get("/iiif/sample/full/max/45/default.jpg")
 
     assert response.status_code == 400

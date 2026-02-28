@@ -1,18 +1,18 @@
 # serverless-iiif-image-server-
 
-FastAPIベースの IIIF Image API 3.0 サーバ実装です。まずは **Level 1** 相当を対象にしています。
+FastAPIベースの IIIF Image API 3.0 サーバ実装です。**Level 2** 相当まで対応しています。
 
 ## 実装済み機能
 
 - `GET /iiif/{identifier}/info.json`
 - `GET /iiif/{identifier}/{region}/{size}/{rotation}/{quality}.{format}`
 - `GET /iiif/{identifier}` から `info.json` への 303 リダイレクト
-- Level 1 の主要パラメータ
-  - `region`: `full`, `square`, `x,y,w,h`
-  - `size`: `max`, `w,`, `,h`
-  - `rotation`: `0`
+- Level 2 の主要パラメータ
+  - `region`: `full`, `square`, `x,y,w,h`, `pct:x,y,w,h`
+  - `size`: `max`, `w,`, `,h`, `pct:n`, `w,h`, `!w,h`
+  - `rotation`: `0`, `90`, `180`, `270`
   - `quality`: `default`
-  - `format`: `jpg`
+  - `format`: `jpg`, `png`
 - CORS 有効化（`*`）
 
 ## セットアップ
