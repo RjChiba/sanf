@@ -36,16 +36,20 @@ class LocalFileConnector:
 
     root: Path
 
+    _EXTENSIONS = (".jpg", ".jpeg", ".png", ".tif", ".tiff")
+
     def fetch_image_bytes(self, identifier: str) -> bytes:
-        image_path = (self.root / identifier).resolve()
         root_path = self.root.resolve()
+        base_path = (self.root / identifier).resolve()
 
-        print(image_path)
-
-        if not str(image_path).startswith(str(root_path)):
+        if not str(base_path).startswith(str(root_path)):
             raise ImageNotFoundError("invalid identifier path")
 
-        if not image_path.is_file():
+        image_path = next(
+            (p for ext in self._EXTENSIONS if (p := base_path.with_suffix(ext)).is_file()),
+            None,
+        )
+        if image_path is None:
             raise ImageNotFoundError(f"identifier not found: {identifier}")
 
         try:
