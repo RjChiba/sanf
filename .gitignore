@@ -4,5 +4,8 @@ __pycache__/
 
 .venv
 
+# local testing
+images/
+
 # macOS
 *.DS_Store
