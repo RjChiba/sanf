@@ -110,7 +110,11 @@ def parse_size(size: str, region_w: int, region_h: int) -> tuple[int, int]:
 
 
 def validate_rotation(rotation: str) -> None:
-    if rotation not in {"0", "90", "180", "270"}:
+    try:
+        angle = float(rotation)
+    except ValueError:
+        raise IIIFRequestError("unsupported rotation")
+    if angle < 0:
         raise IIIFRequestError("unsupported rotation")
 
 
@@ -138,7 +142,7 @@ def render_image(source_bytes: bytes, region: str, size: str, rotation: str, fmt
         if (out_w, out_h) != (crop_w, crop_h):
             cropped = cropped.resize((out_w, out_h), Image.Resampling.LANCZOS)
         if rotation != "0":
-            cropped = cropped.rotate(-int(rotation), expand=True)
+            cropped = cropped.rotate(-float(rotation), expand=True)
 
         output = BytesIO()
         save_kwargs: dict = {"format": _PIL_FORMAT[fmt]}
