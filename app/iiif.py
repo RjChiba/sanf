@@ -120,7 +120,7 @@ def validate_rotation(rotation: str) -> None:
 
 _SUPPORTED_FORMATS = {"jpg", "png"}
 _PIL_FORMAT = {"jpg": "JPEG", "png": "PNG"}
-_MEDIA_TYPE = {"jpg": "image/jpeg", "png": "image/png"}
+MEDIA_TYPE = {"jpg": "image/jpeg", "png": "image/png"}
 
 
 def validate_quality_and_format(quality: str, fmt: str) -> None:
@@ -130,13 +130,30 @@ def validate_quality_and_format(quality: str, fmt: str) -> None:
         raise IIIFRequestError("unsupported format")
 
 
-def render_image(source_bytes: bytes, region: str, size: str, rotation: str, fmt: str) -> tuple[bytes, int, int]:
+def render_image(
+    source_bytes: bytes,
+    region: str,
+    size: str,
+    rotation: str,
+    fmt: str,
+    *,
+    jpeg_quality: int = 85,
+    max_width: int | None = None,
+    max_height: int | None = None,
+) -> tuple[bytes, int, int]:
     validate_rotation(rotation)
 
     with Image.open(BytesIO(source_bytes)) as image:
         rgb = image.convert("RGB")
         left, top, crop_w, crop_h = parse_region(region, rgb.width, rgb.height)
         out_w, out_h = parse_size(size, crop_w, crop_h)
+
+        if max_width and out_w > max_width:
+            out_h = max(1, round(out_h * max_width / out_w))
+            out_w = max_width
+        if max_height and out_h > max_height:
+            out_w = max(1, round(out_w * max_height / out_h))
+            out_h = max_height
 
         cropped = rgb.crop((left, top, left + crop_w, top + crop_h))
         if (out_w, out_h) != (crop_w, crop_h):
@@ -147,6 +164,6 @@ def render_image(source_bytes: bytes, region: str, size: str, rotation: str, fmt
         output = BytesIO()
         save_kwargs: dict = {"format": _PIL_FORMAT[fmt]}
         if fmt == "jpg":
-            save_kwargs["quality"] = 85
+            save_kwargs["quality"] = jpeg_quality
         cropped.save(output, **save_kwargs)
         return output.getvalue(), rgb.width, rgb.height

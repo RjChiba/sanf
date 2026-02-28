@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from app.connectors import ImageNotFoundError
-from app.main import ServiceContainer, app
+from app import create_app, IIIFServerSettings
 
 
 class InMemoryConnector:
@@ -27,8 +27,8 @@ def _make_image(width: int = 200, height: int = 100) -> bytes:
 
 
 def _client() -> TestClient:
-    app.state.services = ServiceContainer(connector=InMemoryConnector({"sample": _make_image()}))
-    return TestClient(app)
+    settings = IIIFServerSettings(connector=InMemoryConnector({"sample": _make_image()}))
+    return TestClient(create_app(settings))
 
 
 def _response_size(response) -> tuple[int, int]:
