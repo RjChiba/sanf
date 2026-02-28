@@ -34,8 +34,11 @@ def parse_region(region: str, width: int, height: int) -> tuple[int, int, int, i
         left, top, region_w, region_h = (int(match.group(i)) for i in range(1, 5))
         if region_w <= 0 or region_h <= 0:
             raise IIIFRequestError("region width/height must be > 0")
-        if left < 0 or top < 0 or left + region_w > width or top + region_h > height:
-            raise IIIFRequestError("region is out of bounds")
+        if left >= width or top >= height:
+            raise IIIFRequestError("region origin is out of bounds")
+        # Clip to image boundary per IIIF spec
+        region_w = min(region_w, width - left)
+        region_h = min(region_h, height - top)
         return left, top, region_w, region_h
 
     pct_match = _REGION_PCT_RE.fullmatch(region)
@@ -45,16 +48,14 @@ def parse_region(region: str, width: int, height: int) -> tuple[int, int, int, i
     x_pct, y_pct, w_pct, h_pct = (float(pct_match.group(i)) for i in range(1, 5))
     if w_pct <= 0 or h_pct <= 0:
         raise IIIFRequestError("region width/height must be > 0")
-    if x_pct < 0 or y_pct < 0 or x_pct + w_pct > 100 or y_pct + h_pct > 100:
-        raise IIIFRequestError("region is out of bounds")
+    if x_pct >= 100 or y_pct >= 100:
+        raise IIIFRequestError("region origin is out of bounds")
 
     left = round(width * (x_pct / 100.0))
     top = round(height * (y_pct / 100.0))
-    region_w = max(1, round(width * (w_pct / 100.0)))
-    region_h = max(1, round(height * (h_pct / 100.0)))
-
-    if left + region_w > width or top + region_h > height:
-        raise IIIFRequestError("region is out of bounds")
+    # Clip to image boundary per IIIF spec
+    region_w = max(1, min(round(width * (w_pct / 100.0)), width - left))
+    region_h = max(1, min(round(height * (h_pct / 100.0)), height - top))
 
     return left, top, region_w, region_h
 
