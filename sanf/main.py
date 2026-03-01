@@ -10,9 +10,9 @@ from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.routing import APIRouter
 from PIL import Image
 
-from app.connectors import ConnectorError, ImageNotFoundError, LocalFileConnector
-from app.iiif import IIIFRequestError, MEDIA_TYPE, render_image, validate_quality_and_format
-from app.settings import IIIFServerSettings
+from sanf.connectors import ConnectorError, ImageNotFoundError, LocalFileConnector
+from sanf.iiif import IIIFRequestError, MEDIA_TYPE, render_image, validate_quality_and_format
+from sanf.settings import IIIFServerSettings
 
 
 IIIF_PROTOCOL = "http://iiif.io/api/image"
@@ -101,7 +101,7 @@ def create_app(settings: IIIFServerSettings | None = None) -> FastAPI:
             connector=LocalFileConnector(Path(os.getenv("IIIF_SOURCE_ROOT", "./images")))
         )
 
-    application = FastAPI(title="Serverless IIIF Image Server", version="0.1.0")
+    application = FastAPI(title="Serverless IIIF Image Server", version="1.0.0")
     application.add_middleware(
         CORSMiddleware,
         allow_origins=list(settings.cors_origins),
@@ -113,4 +113,3 @@ def create_app(settings: IIIFServerSettings | None = None) -> FastAPI:
     return application
 
 
-app = create_app
