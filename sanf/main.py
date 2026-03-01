@@ -10,9 +10,9 @@ from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.routing import APIRouter
 from PIL import Image
 
-from app.connectors import ConnectorError, ImageNotFoundError, LocalFileConnector
-from app.iiif import IIIFRequestError, MEDIA_TYPE, render_image, validate_quality_and_format
-from app.settings import IIIFServerSettings
+from sanf.connectors import ConnectorError, ImageNotFoundError, LocalFileConnector
+from sanf.iiif import IIIFRequestError, MEDIA_TYPE, render_image, validate_quality_and_format
+from sanf.settings import IIIFServerSettings
 
 
 IIIF_PROTOCOL = "http://iiif.io/api/image"

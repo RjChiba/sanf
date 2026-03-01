@@ -5,8 +5,8 @@ from io import BytesIO
 from fastapi.testclient import TestClient
 from PIL import Image
 
-from app.connectors import ImageNotFoundError
-from app import create_app, IIIFServerSettings
+from sanf.connectors import ImageNotFoundError
+from sanf import create_app, IIIFServerSettings
 
 
 class InMemoryConnector:
