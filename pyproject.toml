@@ -1,6 +1,6 @@
 [project]
 name = "sanf"
-version = "0.1.0"
+version = "1.0.0"
 description = "Infra-agnostic IIIF Image API 3.0 server built with FastAPI"
 readme = "README.md"
 requires-python = ">=3.12"
