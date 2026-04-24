@@ -137,7 +137,7 @@ AWS_DEFAULT_REGION=us-east-1 uvicorn examples.03_s3_connector:app --reload
 
 ## 4. Custom connector — Google Cloud Storage
 
-**File:** [06_gcs_connector.py](06_gcs_connector.py)
+**File:** [04_gcs_connector.py](04_gcs_connector.py)
 
 The GCS connector follows the same pattern as the S3 one: iterate over known
 extensions, map `NotFound` to `ImageNotFoundError`, and re-raise any other API
