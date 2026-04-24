@@ -5,6 +5,7 @@ dist/
 build/
 
 .venv
+uv.lock
 
 # local testing
 images/

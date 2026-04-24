@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-04-24
+
+### Added
+- `IIIFServerSettings.public_base_url` — optional setting to override the base URL used in `info.json`'s `id` field.
+  When set (e.g. `https://proxy.example.com`), the scheme and host of the internal request URL are replaced with this value,
+  allowing stable HTTPS URLs behind reverse proxies (Cloud Run, etc.) where TLS is terminated upstream.
+  If unset, behavior is unchanged from 1.0.0.
+
 ## [1.0.0] - 2026-03-01
 
 ### Added

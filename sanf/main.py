@@ -3,6 +3,7 @@ from __future__ import annotations
 from io import BytesIO
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,7 +34,11 @@ def create_iiif_router(settings: IIIFServerSettings) -> APIRouter:
             raise HTTPException(status_code=502, detail="connector error") from exc
 
     def _service_id(request: Request, identifier: str) -> str:
-        return str(request.url_for("iiif_base", identifier=identifier))
+        url = request.url_for("iiif_base", identifier=identifier)
+        if settings.public_base_url:
+            path = urlparse(str(url)).path
+            return settings.public_base_url.rstrip("/") + path
+        return str(url)
 
     @router.get("/{identifier}", name="iiif_base")
     def iiif_base(identifier: str, request: Request) -> RedirectResponse:
@@ -101,7 +106,7 @@ def create_app(settings: IIIFServerSettings | None = None) -> FastAPI:
             connector=LocalFileConnector(Path(os.getenv("IIIF_SOURCE_ROOT", "./images")))
         )
 
-    application = FastAPI(title="Serverless IIIF Image Server", version="1.0.0")
+    application = FastAPI(title="Serverless IIIF Image Server", version="1.1.0")
     application.add_middleware(
         CORSMiddleware,
         allow_origins=list(settings.cors_origins),

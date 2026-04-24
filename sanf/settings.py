@@ -13,3 +13,4 @@ class IIIFServerSettings:
     jpeg_quality: int = 85
     max_width: int | None = None
     max_height: int | None = None
+    public_base_url: str | None = None
