@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Sequence
 
-from app.connectors import ImageSourceConnector
+from sanf.connectors import ImageSourceConnector
 
 
 @dataclass
@@ -13,3 +13,4 @@ class IIIFServerSettings:
     jpeg_quality: int = 85
     max_width: int | None = None
     max_height: int | None = None
+    public_base_url: str | None = None

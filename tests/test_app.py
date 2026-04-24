@@ -5,8 +5,8 @@ from io import BytesIO
 from fastapi.testclient import TestClient
 from PIL import Image
 
-from app.connectors import ImageNotFoundError
-from app import create_app, IIIFServerSettings
+from sanf.connectors import ImageNotFoundError
+from sanf import create_app, IIIFServerSettings
 
 
 class InMemoryConnector:
@@ -95,8 +95,50 @@ def test_level2_rotation_90() -> None:
     assert _response_size(response) == (100, 200)
 
 
-def test_invalid_rotation() -> None:
+def test_arbitrary_rotation_is_valid() -> None:
     client = _client()
     response = client.get("/iiif/sample/full/max/45/default.jpg")
 
+    assert response.status_code == 200
+
+
+def test_invalid_rotation() -> None:
+    client = _client()
+    response = client.get("/iiif/sample/full/max/-90/default.jpg")
+
     assert response.status_code == 400
+
+
+def test_info_json_id_uses_request_url_by_default() -> None:
+    client = _client()
+    response = client.get("/iiif/sample/info.json")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"].startswith("http://testserver/iiif/sample")
+
+
+def test_info_json_id_overridden_by_public_base_url() -> None:
+    settings = IIIFServerSettings(
+        connector=InMemoryConnector({"sample": _make_image()}),
+        public_base_url="https://proxy.example.com",
+    )
+    client = TestClient(create_app(settings))
+    response = client.get("/iiif/sample/info.json")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"] == "https://proxy.example.com/iiif/sample"
+
+
+def test_info_json_id_public_base_url_trailing_slash_normalized() -> None:
+    settings = IIIFServerSettings(
+        connector=InMemoryConnector({"sample": _make_image()}),
+        public_base_url="https://proxy.example.com/",
+    )
+    client = TestClient(create_app(settings))
+    response = client.get("/iiif/sample/info.json")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"] == "https://proxy.example.com/iiif/sample"
