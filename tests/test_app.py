@@ -4,7 +4,7 @@ from io import BytesIO
 
 import pytest
 from fastapi.testclient import TestClient
-from PIL import Image, JpegImagePlugin
+from PIL import Image, ImageChops, ImageStat, JpegImagePlugin
 
 from sanf.connectors import ImageNotFoundError
 from sanf import create_app, IIIFServerSettings
@@ -291,3 +291,43 @@ def test_max_width_limits_output_with_jpeg_dct_scaling() -> None:
 
     assert response.status_code == 200
     assert _response_size(response) == (300, 240)
+
+
+def _triangle_wave_jpeg(edge: int = 2048) -> tuple[bytes, Image.Image]:
+    """JPEG with steep, continuous gradients so sub-pixel misalignment is measurable."""
+    wave = Image.linear_gradient("L").resize((edge, edge)).point(lambda v: 255 - abs((v * 4) % 510 - 255))
+    image = Image.merge("RGB", (wave, wave.rotate(90), wave.transpose(Image.Transpose.FLIP_LEFT_RIGHT)))
+    buf = BytesIO()
+    image.save(buf, format="JPEG", quality=95)
+    data = buf.getvalue()
+    with Image.open(BytesIO(data)) as decoded:
+        return data, decoded.convert("RGB")
+
+
+@pytest.mark.parametrize(
+    ("region", "size"),
+    [
+        ((1001, 1003, 777, 555), (97, 69)),
+        ((13, 7, 1500, 1500), (180, 180)),
+        ((333, 555, 999, 777), (120, 93)),
+    ],
+)
+def test_unaligned_region_matches_full_resolution_rendering(
+    region: tuple[int, int, int, int], size: tuple[int, int]
+) -> None:
+    data, full_resolution = _triangle_wave_jpeg()
+    left, top, width, height = region
+    reference = full_resolution.crop((left, top, left + width, top + height)).resize(
+        size, Image.Resampling.LANCZOS
+    )
+
+    client = _render_client({"wave": data})
+    response = client.get(f"/iiif/wave/{left},{top},{width},{height}/{size[0]},{size[1]}/0/default.png")
+
+    assert response.status_code == 200
+    with Image.open(BytesIO(response.content)) as rendered:
+        diff = ImageChops.difference(rendered.convert("RGB"), reference)
+    mean_abs_diff = sum(ImageStat.Stat(diff).mean) / 3
+    # Decoding at 1/8 scale must not shift the region (rounding to whole decoded
+    # pixels gives ~0.7-1.5 here; resampling from the exact box gives ~0.2).
+    assert mean_abs_diff < 0.4

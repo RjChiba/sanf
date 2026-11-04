@@ -189,11 +189,15 @@ def render_image(
             else:
                 result = working.crop((left, top, left + crop_w, top + crop_h))
         else:
-            # Region in decoded coordinates (smaller than the source after DCT scaling).
-            l, t = round(left * scale), round(top * scale)
-            r, btm = round((left + crop_w) * scale), round((top + crop_h) * scale)
-            result = working.crop((l, t, max(r, l + 1), max(btm, t + 1)))
-            result = result.resize((out_w, out_h), Image.Resampling.LANCZOS)
+            # Resample straight from the region (in decoded coordinates, possibly
+            # fractional after DCT scaling) without an intermediate cropped copy.
+            box = (
+                left * scale,
+                top * scale,
+                (left + crop_w) * scale,
+                (top + crop_h) * scale,
+            )
+            result = working.resize((out_w, out_h), Image.Resampling.LANCZOS, box=box)
 
         if rotation != "0":
             result = result.rotate(-float(rotation), expand=True)
