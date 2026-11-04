@@ -142,3 +142,38 @@ def test_info_json_id_public_base_url_trailing_slash_normalized() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["id"] == "https://proxy.example.com/iiif/sample"
+
+
+def _encode(image: Image.Image, fmt: str) -> bytes:
+    buf = BytesIO()
+    image.save(buf, format=fmt)
+    return buf.getvalue()
+
+
+def _render_client(items: dict[str, bytes], **kwargs) -> TestClient:
+    return TestClient(create_app(IIIFServerSettings(connector=InMemoryConnector(items), **kwargs)))
+
+
+def test_grayscale_source_is_rendered_without_conversion() -> None:
+    gray = Image.new("L", (200, 100), color=128)
+    client = _render_client({"gray": _encode(gray, "JPEG")})
+
+    for path in ("full/max/0/default.jpg", "0,0,100,100/50,/90/default.png"):
+        response = client.get(f"/iiif/gray/{path}")
+        assert response.status_code == 200
+        with Image.open(BytesIO(response.content)) as image:
+            assert image.mode == "L"
+
+
+def test_non_rgb_sources_are_converted() -> None:
+    rgba = Image.new("RGBA", (200, 100), color=(0, 255, 0, 128))
+    palette = Image.new("RGB", (200, 100), color=(0, 0, 255)).convert("P")
+    client = _render_client({"rgba": _encode(rgba, "PNG"), "palette": _encode(palette, "PNG")})
+
+    for identifier in ("rgba", "palette"):
+        for fmt in ("jpg", "png"):
+            response = client.get(f"/iiif/{identifier}/full/50,/0/default.{fmt}")
+            assert response.status_code == 200
+            with Image.open(BytesIO(response.content)) as image:
+                assert image.mode == "RGB"
+                assert image.size == (50, 25)
