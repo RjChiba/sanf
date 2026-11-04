@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - Unreleased
+
+### Changed
+- Lower memory use and faster rendering in `render_image` ([#8](https://github.com/RjChiba/sanf/issues/8)).
+  For a 5000×7000 JPEG, peak memory per tile or thumbnail request drops from ~270–430MB to
+  ~5–140MB (`full/max` still needs the full-resolution image: ~420MB → ~270MB), and 12
+  OpenSeadragon-style tiles at 6-way concurrency go from ~1.8GB / 5.2s to ~0.3GB / 0.95s.
+  - The source is no longer converted to RGB when it is already `RGB` or `L`, which avoids a
+    full-size copy.
+  - JPEG sources are decoded with DCT scaling (1/2, 1/4, 1/8) when the requested output is small
+    enough, so zoomed-out tiles and thumbnails no longer decode the full-resolution image.
+  - Scaled output is resampled directly from the region (`resize(size, box=region)`) instead of
+    `crop()` + `resize()`, which removes the intermediate copy and keeps regions aligned to
+    sub-pixel accuracy after DCT scaling.
+- Grayscale (`L`) sources are now encoded as grayscale JPEG/PNG instead of three-channel RGB.
+- Scaled output pixel values differ slightly from 1.1.0, because JPEG DCT scaling replaces part of
+  the Lanczos downscaling and resampling near region edges now uses the neighbouring source pixels.
+  Output dimensions are unchanged, and requests without scaling (`size` equal to the region size)
+  are pixel-identical.
+
 ## [1.1.0] - 2026-04-24
 
 ### Added
