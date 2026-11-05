@@ -4,12 +4,12 @@ version = "1.2.0"
 description = "Infra-agnostic IIIF Image API 3.0 server built with FastAPI"
 readme = "README.md"
 requires-python = ">=3.12"
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE"]
 keywords = ["iiif", "image-api", "fastapi", "image-server", "iiif-image-api"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
-  "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.12",
   "Framework :: FastAPI",
@@ -32,7 +32,7 @@ dev = [
 Repository = "https://github.com/RjChiba/sanf"
 
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
