@@ -1,0 +1,124 @@
+name: Release
+
+# Publishes to PyPI when a version tag (e.g. v1.2.0) is pushed.
+# Uses PyPI Trusted Publishing (OIDC): no API token is stored in this repository.
+# One-time setup on PyPI and GitHub is described in RELEASING.md.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+
+      - name: Test
+        run: python -m pytest -q
+
+  build:
+    name: Build distributions
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Check tag is on main
+        run: |
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Tag $GITHUB_REF_NAME points to a commit that is not on main"
+            exit 1
+          fi
+
+      - name: Check tag matches package version
+        id: version
+        run: |
+          python - <<'PY'
+          import os, re, tomllib
+
+          tag = os.environ["GITHUB_REF_NAME"]
+          with open("pyproject.toml", "rb") as f:
+              project_version = tomllib.load(f)["project"]["version"]
+          with open("sanf/main.py", encoding="utf-8") as f:
+              app_version = re.search(r'FastAPI\([^)]*version="([^"]+)"', f.read()).group(1)
+
+          errors = []
+          if tag != f"v{project_version}":
+              errors.append(f"tag {tag} does not match pyproject.toml version {project_version}")
+          if app_version != project_version:
+              errors.append(f"sanf/main.py version {app_version} does not match pyproject.toml version {project_version}")
+          for error in errors:
+              print(f"::error::{error}")
+          if errors:
+              raise SystemExit(1)
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+              f.write(f"version={project_version}\n")
+          PY
+
+      - name: Build
+        run: |
+          python -m pip install "build==1.6.1" "twine==7.0.0"
+          python -m build
+          python -m twine check --strict dist/*
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Protected environment: configure required reviewers and restrict it to
+    # `v*` tags in Settings > Environments (see RELEASING.md).
+    environment:
+      name: pypi
+      url: https://pypi.org/project/sanf/${{ needs.build.outputs.version }}/
+    permissions:
+      id-token: write # OIDC token for Trusted Publishing and attestations; nothing else
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
