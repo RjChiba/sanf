@@ -130,6 +130,24 @@ def validate_quality_and_format(quality: str, fmt: str) -> None:
         raise IIIFRequestError("unsupported format")
 
 
+# Modes that can be resampled and encoded as JPEG/PNG without conversion.
+_PASSTHROUGH_MODES = frozenset({"RGB", "L"})
+
+
+def _draft_size(
+    src_w: int, src_h: int, crop_w: int, crop_h: int, out_w: int, out_h: int
+) -> tuple[int, int]:
+    """Smallest full-image size at which the region still covers the output size.
+
+    Passed to ``Image.draft`` so the JPEG decoder can use DCT scaling (1/2, 1/4,
+    1/8) whenever the requested output is small enough.
+    """
+    return (
+        max(1, -(-src_w * out_w // crop_w)),
+        max(1, -(-src_h * out_h // crop_h)),
+    )
+
+
 def render_image(
     source_bytes: bytes,
     region: str,
@@ -144,8 +162,9 @@ def render_image(
     validate_rotation(rotation)
 
     with Image.open(BytesIO(source_bytes)) as image:
-        rgb = image.convert("RGB")
-        left, top, crop_w, crop_h = parse_region(region, rgb.width, rgb.height)
+        # Image.open is lazy: the size is known but no pixels are decoded yet.
+        src_w, src_h = image.size
+        left, top, crop_w, crop_h = parse_region(region, src_w, src_h)
         out_w, out_h = parse_size(size, crop_w, crop_h)
 
         if max_width and out_w > max_width:
@@ -155,15 +174,37 @@ def render_image(
             out_w = max(1, round(out_w * max_height / out_h))
             out_h = max_height
 
-        cropped = rgb.crop((left, top, left + crop_w, top + crop_h))
-        if (out_w, out_h) != (crop_w, crop_h):
-            cropped = cropped.resize((out_w, out_h), Image.Resampling.LANCZOS)
+        # For JPEG, let the decoder downscale while decoding. No-op for other formats.
+        scale = 1.0
+        drafted = image.draft(None, _draft_size(src_w, src_h, crop_w, crop_h, out_w, out_h))
+        if drafted is not None:
+            scale = drafted[1][2] / src_w
+
+        # Avoid a full-size copy when the decoded mode is already usable.
+        working = image if image.mode in _PASSTHROUGH_MODES else image.convert("RGB")
+
+        if scale == 1.0 and (out_w, out_h) == (crop_w, crop_h):
+            if (left, top, crop_w, crop_h) == (0, 0, src_w, src_h):
+                result = working
+            else:
+                result = working.crop((left, top, left + crop_w, top + crop_h))
+        else:
+            # Resample straight from the region (in decoded coordinates, possibly
+            # fractional after DCT scaling) without an intermediate cropped copy.
+            box = (
+                left * scale,
+                top * scale,
+                (left + crop_w) * scale,
+                (top + crop_h) * scale,
+            )
+            result = working.resize((out_w, out_h), Image.Resampling.LANCZOS, box=box)
+
         if rotation != "0":
-            cropped = cropped.rotate(-float(rotation), expand=True)
+            result = result.rotate(-float(rotation), expand=True)
 
         output = BytesIO()
         save_kwargs: dict = {"format": _PIL_FORMAT[fmt]}
         if fmt == "jpg":
             save_kwargs["quality"] = jpeg_quality
-        cropped.save(output, **save_kwargs)
-        return output.getvalue(), rgb.width, rgb.height
+        result.save(output, **save_kwargs)
+        return output.getvalue(), src_w, src_h
