@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.2.0] - Unreleased
+## [1.2.0] - 2026-11-07
 
 ### Changed
 - Lower memory use and faster rendering in `render_image` ([#8](https://github.com/RjChiba/sanf/issues/8)).
